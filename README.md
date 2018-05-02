@@ -7,6 +7,6 @@ Run the following notebook in this order:
 
 Prepare
 Train
-Electron Selection
 Analyse Output
+Cross Check
 ROOT compression
