@@ -1,7 +1,7 @@
 # LHCb_PID_Compression
 A benchmark to the challenge of compressing an obscured dataset containing Particle Identification
 
-The data can be found here: https://zenodo.org/deposit/1231531#
+The data can be found here: https://zenodo.org/record/1231531#.WyZSQFOFO3V
 
 Download it and put it into a folder called 'Data' in this directory.
 
