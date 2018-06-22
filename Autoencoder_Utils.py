@@ -1,3 +1,5 @@
+#Useful functions live here. 
+
 #Importing necessary libraries
 import numpy as np
 from keras.layers import Input, Dense, Dropout
