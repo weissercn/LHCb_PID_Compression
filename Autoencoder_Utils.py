@@ -1,6 +1,7 @@
 # Useful functions live here. 
 
 # Importing necessary libraries
+import os
 import math
 import string
 import pickle
@@ -32,16 +33,16 @@ def print_features_histograms(features, target=None, save_filename=None, normed=
         ax = fig.add_subplot(math.ceil(features.shape[1] / 2.), 2, n + 1)
         # define range for histograms by cutting 1% of data from both ends
 
-        min_value, max_value = np.percentile(features[feature], [1, 99])
+        min_value, max_value = np.percentile(features[feature].dropna(), [1, 99])
         if target is not None:
-            min_value2, max_value2 = np.percentile(target[feature], [1, 99])
+            min_value2, max_value2 = np.percentile(target[feature].dropna(), [1, 99])
             min_value, max_value = min(min_value, min_value2), max(max_value, max_value2)
         min_value -= 0.1 * np.abs(max_value)
         max_value += 0.2 * np.abs(max_value)
-        ax.hist(features[feature], range=(min_value, max_value), 
+        ax.hist(features[feature].dropna(), range=(min_value, max_value), 
                  label='predicted', **hist_params)
         if target is not None:
-            ax.hist(target[feature], range=(min_value, max_value), 
+            ax.hist(target[feature].dropna(), range=(min_value, max_value), 
                  label='target', **hist_params)
         ax.set_title(feature)
     plt.subplots_adjust(top=0.80, bottom=0.08, left=0.10, right=0.95, hspace=0.60, wspace=0.35)
@@ -50,7 +51,7 @@ def print_features_histograms(features, target=None, save_filename=None, normed=
         plt.savefig(save_filename)
         
         
-def print_features_histograms_displ(features, target=None, save_filename=None, normed=True):
+def print_features_histograms_displ(features, target=None, save_dir='./', save_filename=None, normed=True):
     n_in_row = 3
     n_in_col = 3
     
@@ -70,22 +71,26 @@ def print_features_histograms_displ(features, target=None, save_filename=None, n
             # add sub plot on our figure
             ax = fig.add_subplot(math.ceil(n_features_used_now * 1. / n_in_row), n_in_row, n + 1 - n_features_used )
             # define range for histograms by cutting 1% of data from both ends
-            min_value, max_value = np.percentile(features[feature], [1, 99])
+            min_value, max_value = np.percentile(features[feature].dropna(), [1, 99])
             if target is not None:
-                min_value2, max_value2 = np.percentile(target[feature], [1, 99])
+                min_value2, max_value2 = np.percentile(target[feature].dropna(), [1, 99])
                 min_value, max_value = min(min_value, min_value2), max(max_value, max_value2)
             min_value -= 0.1 * np.abs(max_value)
             max_value += 0.2 * np.abs(max_value)
-            ax.hist(features[feature], range=(min_value, max_value), 
-                     label='predicted', **hist_params)
             if target is not None:
-                ax.hist(target[feature], range=(min_value, max_value), 
+                cur_idx_without_nan = pd.isnull(target[feature]) ^ True
+                ax.hist(features[feature][cur_idx_without_nan], range=(min_value, max_value), 
+                     label='predicted', **hist_params)
+                ax.hist(target[feature][cur_idx_without_nan], range=(min_value, max_value), 
                      label='target', **hist_params)
+            else:
+                ax.hist(features[feature].dropna(), range=(min_value, max_value), 
+                     label='predicted', **hist_params) 
             ax.set_title(feature)
         plt.subplots_adjust(top=0.80, bottom=0.08, left=0.10, right=0.95, hspace=0.60, wspace=0.35)
 
-        if save_filename is not None: 
-            plt.savefig(str(n_turns) + save_filename)
+        if save_filename is not None:
+            plt.savefig(os.path.join(save_dir, str(n_turns) + save_filename))
         n_features_left -= n_features_used_now
         n_features_used += n_features_used_now
         n_turns += 1
@@ -93,7 +98,8 @@ def print_features_histograms_displ(features, target=None, save_filename=None, n
 def plot_difference_displ(
     TYPE, decoded, orig, encoding_dim, TYPE_FEATURES="ALL", FTS_SCLD=False, 
     SetMinMax=False, Transform=True, 
-    l_minmax=[[-15, 15], [-80, 110], [-15, 15], [-80, 80], [-0.8, 1], [-.8, .8], [-.8, .8], [-.8, .8], [-.8, .8]]
+    l_minmax=[[-15, 15], [-80, 110], [-15, 15], [-80, 80], [-0.8, 1], [-.8, .8], [-.8, .8], [-.8, .8], [-.8, .8]], 
+    save_dir="./", save_filename=None
 ):
     # decoded, orig
     if Transform:
@@ -131,24 +137,26 @@ def plot_difference_displ(
             ax = fig.add_subplot(math.ceil(n_features_used_now * 1. / n_in_row), n_in_row, n + 1 - n_features_used)
 #             ax = fig.add_subplot(math.ceil(features.shape[1] / 3.), 3, n + 1)
             # define range for histograms by cutting 1% of data from both ends
-            min_value, max_value = np.percentile(features[feature], [1, 99])
+            min_value, max_value = np.percentile(features[feature].dropna(), [1, 99])
             if target is not None:
-                min_value2, max_value2 = np.percentile(target[feature], [1, 99])
+                min_value2, max_value2 = np.percentile(target[feature].dropna(), [1, 99])
                 min_value, max_value = min(min_value, min_value2), max(max_value, max_value2)
             min_value -= 0.1 * max_value
             max_value += 0.2 * max_value
             
             if False:
-                ax.hist(features[feature], range=(min_value, max_value), 
+                ax.hist(features[feature].dropna(), range=(min_value, max_value), 
                          label='predicted', **hist_params)
                 if target is not None:
-                    ax.hist(target[feature], range=(min_value, max_value), 
+                    ax.hist(target[feature].dropna(), range=(min_value, max_value), 
                          label='target', **hist_params)
 #             print target[feature]
 #             print np.abs(target[feature] - features[feature])
 #             h = ax.hist2d(target[feature], target[feature] - features[feature], 
 #                           bins=[15, 15], norm=LogNorm(vmin=1, vmax=n_points))
-            h = ax.hist2d(target[feature], target[feature] - features[feature], 
+            cur_idx_without_nan = pd.isnull(target[feature]) ^ True
+            h = ax.hist2d(target[feature][cur_idx_without_nan], 
+                          target[feature][cur_idx_without_nan] - features[feature][cur_idx_without_nan], 
                           bins=[15, 15], norm=LogNorm(vmin=1, vmax=n_points), cmap='inferno')
             if SetMinMax:
                 ax.set_ylim(l_minmax[n][0], l_minmax[n][1])
@@ -169,7 +177,8 @@ def plot_difference_displ(
         cbar = plt.colorbar(h[3], cax=cbar_ax, ticks=[1, 10, 100, 1000, 10000, 100000, 200000])
         cbar.ax.set_yticklabels(['1', '10', '100', '1k', '10k', '100k', '200k']) # horizontal colorbar
 
-        plt.savefig(str(n_turns) + "FeatureDeviation_{}_{}.png".format(encoding_dim, TYPE))
+        if save_filename is not None:
+            plt.savefig(os.path.join(save_dir, str(n_turns) + save_filename))
         
         n_features_left -= n_features_used_now
         n_features_used += n_features_used_now
