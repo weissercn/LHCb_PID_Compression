@@ -53,21 +53,15 @@ def create_metrics_folder(path_to_metrics, metrics_dir_name):
     """ Create new folder for metrics in 'metrics_path' dir.
     Return
     ------
-        new_folder : str
-            Path to new folder.
-        old_folder : str
-            Path to prev folder.
+        folder : str
+            Path to save folder.
     """
-    last_folder_n = get_last_dir_n(path_to_metrics, metrics_dir_name)
-    if last_folder_n is None:
-        new_folder = os.path.join(path_to_metrics, metrics_dir_name + '_0')
-        old_folder = None
-    else:
-        new_folder = os.path.join(path_to_metrics, metrics_dir_name + '_' + str(last_folder_n + 1))
-        old_folder = os.path.join(path_to_metrics, metrics_dir_name + '_' + str(last_folder_n))
-    os.makedirs(new_folder)
     
-    return new_folder, old_folder
+    folder = os.path.join(path_to_metrics, metrics_dir_name)
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+    
+    return folder
 
 
 def dump_metrics(path_to_metrics, metrics_dir_name, metrics_dict):
@@ -81,14 +75,11 @@ def dump_metrics(path_to_metrics, metrics_dir_name, metrics_dict):
                              {'metric_name' :  {'pid_label' : {'encoding_dim' : [metric_value, ...]} }}
             Dict of dicts for all metrics.
     """
-    folder, old_folder = create_metrics_folder(path_to_metrics, metrics_dir_name)
+    folder = create_metrics_folder(path_to_metrics, metrics_dir_name)
     print(folder)
 
     for metric_name, metric_values in metrics_dict.items():
         dump(metric_values, folder, metric_name)
-    
-    if old_folder is not None:
-        shutil.rmtree(old_folder, ignore_errors=True)
         
 # Load
 def load_metrics(path_to_metrics, metrics_dir_name):
@@ -133,7 +124,7 @@ def plot_roc_auc(fpr, tpr, roc_auc, f_measure, acc, pid_label=0, xlim=(0, 1), yl
     plt.show()
     
     
-def plot_metrics(metrics_dict, pid_label=0, xlim=(0, 1), ylim=(0, 1)):
+def plot_metrics(metrics_dict, pid_label=0, xlim=(0, 1), ylim=(0, 1), save_path=None):
     plt.figure(figsize=(15, 7))
     lw = 2
     l_colors= ['darkorange', 'blue', 'red', 'green', 'black', 'yellow']
@@ -156,7 +147,8 @@ def plot_metrics(metrics_dict, pid_label=0, xlim=(0, 1), ylim=(0, 1)):
     plt.ylabel('True Positive Rate')
     plt.legend(loc="lower right")
     plt.title("ROC AUC")
-    #plt.savefig("./img/ROC_{}_xlim_{}_ylim_{}.png".format(TYPE, xlim, ylim))
+    if save_path:
+        plt.savefig(os.path.join(save_path, "ROC_pid_{}.png".format(pid_label)))
     
     # PR AUC
     plt.subplot(1, 2, 2)
@@ -177,7 +169,8 @@ def plot_metrics(metrics_dict, pid_label=0, xlim=(0, 1), ylim=(0, 1)):
     plt.ylabel('Recall')
     plt.legend(loc="lower left")
     plt.title("PR AUC")
-    #plt.savefig("./img/PR_{}_xlim_{}_ylim_{}.png".format(TYPE, xlim, ylim))
+    if save_path:
+        plt.savefig(os.path.join(save_path, "PR_pid_{}.png".format(pid_label)))
     plt.show()
     
     
