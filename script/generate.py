@@ -38,6 +38,12 @@ pid = inv_pids[args.particle_type]
 in_columns = ['S0aux7', 'S0aux6', 'S3aux0', 'S2aux0', 'S5aux0']
 out_columns = ['0', '1', '2']
 
+vars_list_input = ['S0x0','S0x1','S0x2','S0x3','S0x4','S3x0','S3x1','S2x0','S2x1','S2x2','S2x3','S0x5','S0x6',
+ 'S0x7','S0x8','S0x9','S0x10','S1x0','S1x1','S1x2','S1x3','S1x4','S1x5','S5x0','S4x0','S4x1','S4x2','S3x2','S4x3',
+ 'S4x4','S5x1','S5x2','S5x3','S5x4','S4x5']
+
+vars_list_aux = ['S5aux0', 'S3aux0', 'S2aux0', 'S0aux0', 'S0aux1', 'S0aux2', 'S0aux3', 'S2aux1', 'S2aux2', 'S2aux3', 'S0aux4', 'S0aux5', 'S0aux6', 'S0aux7', 'S0aux8']
+
 # AE parameters
 DATA_DIM = 35
 ENCODING_DIM = 3
@@ -66,23 +72,38 @@ preprocessor = joblib.load(f'preprocessors/GAN_Kramer_dim3_bs1e4_n80-150_old_pid
 
 # read data
 data = pd.read_csv(input_path)
-with open('features_encoding.json') as f:
-    features_encoding = json.load(f)
-data.rename(columns=features_encoding, inplace=True)
+# with open('features_encoding.json') as f:
+#     features_encoding = json.load(f)
+# data.rename(columns=features_encoding, inplace=True)
+
+scalers = {var: {} for var in vars_list_input+vars_list_aux}
+for i, var in enumerate(vars_list_input+vars_list_aux):
+    scalers[var]['std'] = joblib.load(os.path.join('./preprocessors', "scaler_std_"+var) + ".pkl")
+    scalers[var]['max'] = joblib.load(os.path.join('./preprocessors', "scaler_max_"+var) + ".pkl")
+    
+
+data_scaled = data.copy()
+for var in (vars_list_aux):
+    data_scaled[var] = scalers[var]["std"].transform(data[var].values.reshape(-1, 1))
+    data_scaled[var] = scalers[var]["max"].transform(data_scaled[var].values.reshape(-1, 1))
+    
+data = data_scaled[data.columns]
+data["fictive"] = np.zeros(len(data))
     
 # preprocess data
 preprocessor_columns = '0	1	2	S5aux0	S3aux0	S2aux0	S0aux0	S0aux1	S0aux2	S0aux3	S2aux1	S2aux2	S2aux3	S0aux4	S0aux5	S0aux6	S0aux7	S0aux8'.split('\t')
-replace_col = 'S0aux4'
+replace_col = "fictive"
 target_columns = ['0', '1', '2']
 assert(not replace_col in in_columns, 'Use another column to replace target columns')
 preprocessor_columns = [col if col not in target_columns else replace_col for col in preprocessor_columns]
-input_data = pd.DataFrame(preprocessor.transform(data[preprocessor_columns].values), columns=preprocessor_columns)[in_columns]
+input_data_full = pd.DataFrame(preprocessor.transform(data[preprocessor_columns].values), columns=preprocessor_columns)
+input_data = input_data_full[in_columns]
 
 input_noise = np.random.randn(input_data.shape[0], LATENT_DIMENSIONS)
 input_gen = np.concatenate([input_noise, input_data], axis=1)
 output_gen = generator.predict(input_gen)
 
-gan_output = preprocessor.inverse_transform(np.concatenate([output_gen, data[preprocessor_columns].values[:, OUT_DIM:]], axis=1))
+gan_output = preprocessor.inverse_transform(np.concatenate([output_gen, input_data_full.values[:, OUT_DIM:]], axis=1))[:, :OUT_DIM]
 
 # 2. AE
 
@@ -138,22 +159,13 @@ autoencoder, encoder, decoder = create_autoencoder_aux(
 autoencoder.load_weights("model_old_ratio10_{}.hdf5".format(ENCODING_DIM))
 
 print(gan_output.shape)
-decoded_test = decoder.predict([gan_output[:, :LATENT_DIMENSIONS], gan_output[:, LATENT_DIMENSIONS:]])
+decoded_test = decoder.predict([gan_output, data[preprocessor_columns].values[:, LATENT_DIMENSIONS:]])
 
 # unscale output
-vars_list_input = ['S0x0','S0x1','S0x2','S0x3','S0x4','S3x0','S3x1','S2x0','S2x1','S2x2','S2x3','S0x5','S0x6',
- 'S0x7','S0x8','S0x9','S0x10','S1x0','S1x1','S1x2','S1x3','S1x4','S1x5','S5x0','S4x0','S4x1','S4x2','S3x2','S4x3',
- 'S4x4','S5x1','S5x2','S5x3','S5x4','S4x5']
-
-scalers = {var: {} for var in vars_list_input}
-for i, var in enumerate(vars_list_input):
-    scalers[var]['std'] = joblib.load(os.path.join('./preprocessors', "scaler_std_"+var) + ".pkl")
-    scalers[var]['max'] = joblib.load(os.path.join('./preprocessors', "scaler_max_"+var) + ".pkl")
-    
 decoded_unscaled = decoded_test.copy()
 for i, var in enumerate(vars_list_input):
     decoded_unscaled[:, i] = scalers[var]['std'].inverse_transform(
         scalers[var]['max'].inverse_transform(decoded_unscaled[:, i].reshape(-1, 1))
     ).reshape(-1)
     
-pd.DataFrame(np.concatenate([decoded_unscaled, gan_output[:, LATENT_DIMENSIONS:]], axis=1), columns=vars_list_input+preprocessor_columns[LATENT_DIMENSIONS:]).to_csv(args.output)
+pd.DataFrame(np.concatenate([decoded_unscaled, data[preprocessor_columns].values[:, LATENT_DIMENSIONS:]], axis=1), columns=vars_list_input+preprocessor_columns[LATENT_DIMENSIONS:]).to_csv(args.output)
