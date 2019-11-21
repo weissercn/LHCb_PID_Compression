@@ -103,7 +103,8 @@ input_noise = np.random.randn(input_data.shape[0], LATENT_DIMENSIONS)
 input_gen = np.concatenate([input_noise, input_data], axis=1)
 output_gen = generator.predict(input_gen)
 
-gan_output = preprocessor.inverse_transform(np.concatenate([output_gen, input_data_full.values[:, OUT_DIM:]], axis=1))[:, :OUT_DIM]
+gan_output_full = preprocessor.inverse_transform(np.concatenate([output_gen, input_data_full.values[:, OUT_DIM:]], axis=1))
+gan_output = gan_output_full[:, :OUT_DIM]
 
 # 2. AE
 
@@ -168,4 +169,4 @@ for i, var in enumerate(vars_list_input):
         scalers[var]['max'].inverse_transform(decoded_unscaled[:, i].reshape(-1, 1))
     ).reshape(-1)
     
-pd.DataFrame(np.concatenate([decoded_unscaled, data[preprocessor_columns].values[:, LATENT_DIMENSIONS:]], axis=1), columns=vars_list_input+preprocessor_columns[LATENT_DIMENSIONS:]).to_csv(args.output)
+pd.DataFrame(np.concatenate([decoded_unscaled, gan_output_full[:, LATENT_DIMENSIONS:]], axis=1), columns=vars_list_input+preprocessor_columns[LATENT_DIMENSIONS:]).to_csv(args.output)
