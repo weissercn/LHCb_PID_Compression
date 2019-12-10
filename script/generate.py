@@ -87,8 +87,7 @@ for var in (vars_list_aux):
     data_scaled[var] = scalers[var]["std"].transform(data[var].values.reshape(-1, 1))
     data_scaled[var] = scalers[var]["max"].transform(data_scaled[var].values.reshape(-1, 1))
     
-data = data_scaled[data.columns]
-data["fictive"] = np.zeros(len(data))
+data_scaled["fictive"] = np.zeros(len(data_scaled))
     
 # preprocess data
 preprocessor_columns = '0	1	2	S5aux0	S3aux0	S2aux0	S0aux0	S0aux1	S0aux2	S0aux3	S2aux1	S2aux2	S2aux3	S0aux4	S0aux5	S0aux6	S0aux7	S0aux8'.split('\t')
@@ -96,7 +95,7 @@ replace_col = "fictive"
 target_columns = ['0', '1', '2']
 assert(not replace_col in in_columns, 'Use another column to replace target columns')
 preprocessor_columns = [col if col not in target_columns else replace_col for col in preprocessor_columns]
-input_data_full = pd.DataFrame(preprocessor.transform(data[preprocessor_columns].values), columns=preprocessor_columns)
+input_data_full = pd.DataFrame(preprocessor.transform(data_scaled[preprocessor_columns].values), columns=preprocessor_columns)
 input_data = input_data_full[in_columns]
 
 input_noise = np.random.randn(input_data.shape[0], LATENT_DIMENSIONS)
@@ -160,7 +159,7 @@ autoencoder, encoder, decoder = create_autoencoder_aux(
 autoencoder.load_weights("model_old_ratio10_{}.hdf5".format(ENCODING_DIM))
 
 print(gan_output.shape)
-decoded_test = decoder.predict([gan_output, data[preprocessor_columns].values[:, LATENT_DIMENSIONS:]])
+decoded_test = decoder.predict([gan_output, data_scaled[preprocessor_columns].values[:, LATENT_DIMENSIONS:]])
 
 # unscale output
 decoded_unscaled = decoded_test.copy()
@@ -169,4 +168,4 @@ for i, var in enumerate(vars_list_input):
         scalers[var]['max'].inverse_transform(decoded_unscaled[:, i].reshape(-1, 1))
     ).reshape(-1)
     
-pd.DataFrame(np.concatenate([decoded_unscaled, gan_output_full[:, LATENT_DIMENSIONS:]], axis=1), columns=vars_list_input+preprocessor_columns[LATENT_DIMENSIONS:]).to_csv(args.output)
+pd.DataFrame(np.concatenate([decoded_unscaled, data[vars_list_aux]], axis=1), columns=vars_list_input+preprocessor_columns[LATENT_DIMENSIONS:]).to_csv(args.output)
