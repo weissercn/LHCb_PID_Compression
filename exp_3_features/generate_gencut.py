@@ -1,5 +1,7 @@
 """
 This file is like generate.py and generates new MC from a trained GAN. However, it allows us to regenerate an event if it doesn't pass a cut.    
+Run like:
+python3 generate_gencut.py kaon /data/weisser/LbVMWeisser_shared/Analyses/LUV_ML/NTuple_BKee_481_482_VAE_K_out.csv test.csv pidk
 """
 
 import tensorflow as tf
@@ -27,7 +29,7 @@ parser.add_argument('particle_type', choices=['kaon', 'electron', 'muon'],
 parser.add_argument('input', type=str,
                     help='File to compress')
 parser.add_argument('output', type=str, help='Path to save')
-parser.add_argument('cut_type', choices=['none', 'pidmu', 'pide'],
+parser.add_argument('cut_type', choices=['none', 'pidmu', 'pide', 'pnnk'],
                     help='cut on VAE output after generation')
 args = parser.parse_args()
 
@@ -85,14 +87,18 @@ data_scaled = pd.DataFrame(max_abs_scaler.transform(data_scaled), columns=data_s
 ## TESTING WHAT THE CUTOFFS ARE AFTER SCALING
 #print("type(data[vars_list_aux+vars_list_input]) ", type(data[vars_list_aux+vars_list_input]))
 data_scaled_test = data[vars_list_aux+vars_list_input].iloc[[0,1]].copy()
-data_scaled_test['GS3x1'] = -3
-data_scaled_test['GS3x0'] = 0
+data_scaled_test['GS3x1'][0] = -3
+data_scaled_test['GS3x0'][0] = 0
+data_scaled_test['GS0x7'][0] = 0
+data_scaled_test['GS0x7'][1] = 1
 #print("data_scaled_test ", data_scaled_test.shape, "\n",data_scaled_test)
 data_scaled_test = pd.DataFrame(robust_scaler.transform(data_scaled_test), columns=data_scaled_test.columns)
 data_scaled_test = pd.DataFrame(max_abs_scaler.transform(data_scaled_test), columns=data_scaled_test.columns)
 #print("data_scaled_test ", data_scaled_test.shape, "\n",data_scaled_test)
 GS3x1_m3 = data_scaled_test['GS3x1'][0]
 GS3x0_0 = data_scaled_test['GS3x0'][0]
+GS0x7_0 = data_scaled_test['GS0x7'][0]
+GS0x7_1 = data_scaled_test['GS0x7'][1]
 #print("GS3x1_m3 : ", GS3x1_m3)
 
 #GS3x1 = -3 turns into GS3x1 = -0.14385 after scaling
@@ -116,9 +122,11 @@ while np.sum(np.logical_not(passcut_mask))>0:
     
     if cut_type== 'pidmu' :
         # vars_list_input : ['GS3x1', 'GS3x0', 'GS0x7'] =  ["trks_EcalPIDmu",  "trks_EcalPIDe",  "trks_ProbNNk"]
-        tmp_passcut_mask = output_gen_part[:,0] > GS3x1_m3 # -3 before scaling  # trks_EcalPIDmu > -3   # length is number of newly generated data
+        tmp_passcut_mask = GS3x1_m3 < output_gen_part[:,0] # -3 before scaling  # trks_EcalPIDmu > -3   # length is number of newly generated data
     elif cut_type== 'pide':
-        tmp_passcut_mask = output_gen_part[:,1] > GS3x0_0
+        tmp_passcut_mask = GS3x0_0 < output_gen_part[:,1] 
+    elif cut_type== 'pnnk':
+        tmp_passcut_mask = np.logical_and((GS0x7_0 < output_gen_part[:,2]), (output_gen_part[:,2] < GS0x7_1))
     else:
         tmp_passcut_mask = np.array([True]*n_data) # length is number of newly generated data
 
