@@ -4,7 +4,7 @@ A benchmark to the challenge of compressing an obscured dataset containing Parti
 GANs and Flows are trained in the exp\_3\_features directory with jupyter notebooks. Once run, the models and preprocessing scalers are saved in exp\_3\_features\weights and exp\_3\_features\gan\_preprocessors, respectively. 
 Once trained the models can be accessed by running scripts like generate\_Flow\_gencut\_ksttrain\_nspd.py. 
 
-Both the data provided for running, and the processing of the generated data is done with the following repo https://github.com/weissercn/LUV\_ML and the scriot Efficiency.py within it.  
+Both the data provided for running, and the processing of the generated data is done with the following repo https://github.com/weissercn/LUV_ML and the scriot Efficiency.py within it.  
 For individuals in the Mike Williams group at MIT, you can access the data in exp\_3\_features/data in the following directory of geno:  /data/weisser\_genmodels/LHCb\_PID\_Compression\_exp\_3\_features\_data.
 
 
